@@ -331,6 +331,13 @@ static void rescueAttainPosition(bool newGpsData)
     gpsRescueAngle[AI_PITCH] = pitchAdjustmentFiltered;
     // this angle gets added to the normal pitch Angle Mode control values in pid.c - will be seen in pitch setpoint
 
+    if (rescueState.phase == RESCUE_ATTAIN_ALT && positionEstimatorIsValidXY()) {
+            // Wir nutzen den internen Autopiloten, um die X/Y Koordinaten "festzunageln"
+            positionControl(); 
+            gpsRescueAngle[AI_PITCH] = autopilotAngle[AI_PITCH];
+            gpsRescueAngle[AI_ROLL]  = autopilotAngle[AI_ROLL];
+        }
+
     DEBUG_SET(DEBUG_GPS_RESCUE_VELOCITY, 3, lrintf(rescueState.intent.targetVelocityCmS)); // target velocity to home
     DEBUG_SET(DEBUG_GPS_RESCUE_TRACKING, 1, lrintf(rescueState.intent.targetVelocityCmS)); // target velocity to home
 }
@@ -784,6 +791,9 @@ void gpsRescueUpdate(void)
                 // otherwise behave as for a normal rescue
                 initialiseRescueValues ();
                 returnAltitudeLow = getAltitudeCmControl() < rescueState.intent.returnAltitudeCm;
+                if (positionEstimatorIsValidXY()){
+                    resetPositionControl(TASK_GPS_RESCUE_RATE_HZ);
+                }
                 rescueState.phase = RESCUE_ATTAIN_ALT;
             }
         }
