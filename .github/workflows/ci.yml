@@ -170,7 +170,6 @@ jobs:
             obj/*.hex
             obj/*.uf2
             obj/*.bin
-            obj/*_${{ matrix.target }}.elf
           retention-days: 60
 
   test:
