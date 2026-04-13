@@ -71,7 +71,6 @@ LD_FLAGS = -lm \
               -Wl,-gc-sections,-Map,$(TARGET_MAP) \
               -Wl,-L$(LINKER_DIR) \
               -Wl,--cref \
-              -Wl,--strip-debug \
               -T$(LD_SCRIPT) \
               -T$(ESP_ROM_LD_DIR)/esp32.rom.ld \
               -T$(ESP_ROM_LD_DIR)/esp32.rom.api.ld \
@@ -121,9 +120,3 @@ DEVICE_STDPERIPH_SRC = \
             esp-idf/components/soc/esp32/interrupts.c
 
 MCU_EXCLUDES =
-
-# Strip debug symbols from ELF before creating BIN to reduce size
-$(TARGET_BIN): $(TARGET_ELF)
-	@echo "Stripping and creating BIN $(TARGET_BIN)" "$(STDOUT)"
-	$(V1) $(STRIP) $(TARGET_ELF)
-	$(V1) $(OBJCOPY) -O binary $(TARGET_ELF) $@
