@@ -71,6 +71,7 @@ LD_FLAGS = -lm \
               -Wl,-gc-sections,-Map,$(TARGET_MAP) \
               -Wl,-L$(LINKER_DIR) \
               -Wl,--cref \
+              -Wl,--strip-all \
               -T$(LD_SCRIPT) \
               -T$(ESP_ROM_LD_DIR)/esp32.rom.ld \
               -T$(ESP_ROM_LD_DIR)/esp32.rom.api.ld \
