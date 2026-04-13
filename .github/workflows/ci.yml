@@ -169,7 +169,8 @@ jobs:
           path: |
             obj/*.hex
             obj/*.uf2
-            obj/*_${{ matrix.target }}*
+            obj/*.bin
+            obj/*_${{ matrix.target }}.elf
           retention-days: 60
 
   test:
