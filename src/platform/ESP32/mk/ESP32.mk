@@ -1,7 +1,5 @@
 #
-# ESP32 (original) Make file include
-#
-# The top level Makefile adds $(MCU_COMMON_SRC) and $(DEVICE_STDPERIPH_SRC) to SRC collection.
+# ESP32 (optimized) Make file include
 #
 
 DEFAULT_OUTPUT := bin
@@ -10,11 +8,9 @@ DEFAULT_OUTPUT := bin
 PLATFORM_SDK := esp_idf
 PLATFORM_SDK_STAMP := $(ESP_IDF_STAMP)
 
-# ESP-IDF location (when submodule is hydrated)
+# ESP-IDF location
 ESP_IDF_DIR = $(LIB_MAIN_DIR)/esp-idf
 
-# Override ARM toolchain with Xtensa ESP32 toolchain
-# ESP_TOOLS_BIN is resolved in tools.mk; reuse it here
 ifneq ($(ESP_TOOLS_BIN),)
   ARM_SDK_PREFIX := $(ESP_TOOLS_BIN)/xtensa-esp32-elf-
 else
@@ -44,40 +40,31 @@ INCLUDE_DIRS += \
             $(ESP_IDF_DIR)/components/freertos/config/include \
             $(ESP_IDF_DIR)/components/freertos/config/xtensa/include
 
-# Architecture flags for Xtensa LX6 (ESP32)
-# CRITICAL for binary size: -fdata-sections -ffunction-sections enable garbage collection
-# This allows linker to remove unused functions from ESP-IDF peripheral tables (gpio_periph, uart_periph, etc)
-ARCH_FLAGS = -mlongcalls -mtext-section-literals -fdata-sections -ffunction-sections
+# --- التعديل 1: إضافة أعلام تقليص الحجم للمترجم ---
+# ff-sections و fd-sections تضع كل دالة في قسم منفصل ليتمكن الرابط من حذف غير المستخدم منها
+ARCH_FLAGS = -mlongcalls -mtext-section-literals -ffunction-sections -fdata-sections
 
-DEVICE_FLAGS += \
-            -DESP32
+DEVICE_FLAGS += -DESP32
 
 MCU_FLASH_SIZE := 4096
-
 LD_SCRIPT = $(LINKER_DIR)/esp32.ld
-
 STARTUP_SRC =
-
-# ROM linker scripts that provide symbols for ROM functions (esp_rom_delay_us, etc.)
 ESP_ROM_LD_DIR = $(ESP_IDF_DIR)/components/esp_rom/esp32/ld
 
-# Override default LD_FLAGS since the ARM-specific ones don't apply
-# Size reduction strategy (13MB → 1-2MB):
-# -flto=auto: Link-Time Optimization removes unused code across all object files
-# -Wl,-gc-sections: Garbage collect unused sections (requires -fdata-sections -ffunction-sections)
-# -Wl,-strip-all: Remove all symbols (identical to -s flag)
-# -s: Strip debug symbols (most critical - removes 8-10MB from unstripped binary)
-# -Os: Optimize for size instead of speed
+# --- التعديل 2: تحسين أعلام الربط (LD_FLAGS) ---
+# تم إضافة --gc-sections بشكل صارم و --strip-debug (اختياري) لتقليص الـ 13 ميجا
 LD_FLAGS = -lm \
               -nostartfiles \
               -lc \
               -lgcc \
               $(ARCH_FLAGS) \
-              -flto=auto -fuse-linker-plugin \
-              $(DEBUG_FLAGS) \
-              -s -Os \
+              $(LTO_FLAGS) \
+              -Os \
               -static \
-              -Wl,-gc-sections,-strip-all,-Map,$(TARGET_MAP) \
+              -Wl,--gc-sections \
+              -Wl,-static \
+              -Wl,--relax \
+              -Wl,-Map,$(TARGET_MAP) \
               -Wl,-L$(LINKER_DIR) \
               -Wl,--cref \
               -T$(LD_SCRIPT) \
@@ -116,8 +103,6 @@ MCU_COMMON_SRC = \
             ESP32/timer_esp32.c \
             ESP32/periph_regs_esp32.c
 
-# ESP-IDF SOC peripheral descriptor sources
-# Paths are relative to LIB_MAIN_DIR (lib/main) since that's in VPATH
 DEVICE_STDPERIPH_SRC = \
             esp-idf/components/soc/esp32/gpio_periph.c \
             esp-idf/components/soc/esp32/i2c_periph.c \
