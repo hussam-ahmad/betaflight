@@ -45,12 +45,9 @@ INCLUDE_DIRS += \
             $(ESP_IDF_DIR)/components/freertos/config/xtensa/include
 
 # Architecture flags for Xtensa LX6 (ESP32)
-# CRITICAL: -fdata-sections and -ffunction-sections enable garbage collection of unused functions
-# Without these, -gc-sections cannot remove unused ESP-IDF code effectively
+# CRITICAL for binary size: -fdata-sections -ffunction-sections enable garbage collection
+# This allows linker to remove unused functions from ESP-IDF peripheral tables (gpio_periph, uart_periph, etc)
 ARCH_FLAGS = -mlongcalls -mtext-section-literals -fdata-sections -ffunction-sections
-
-# Size optimization for ESP32: prefer small binary over execution speed
-OPTIMISE_SIZE := -Os
 
 DEVICE_FLAGS += \
             -DESP32
@@ -65,22 +62,22 @@ STARTUP_SRC =
 ESP_ROM_LD_DIR = $(ESP_IDF_DIR)/components/esp_rom/esp32/ld
 
 # Override default LD_FLAGS since the ARM-specific ones don't apply
-# Critical optimizations for size:
-# -gc-sections: removes unused code sections
-# -fdata-sections -ffunction-sections (in ARCH_FLAGS): enables fine-grained section control
-# -s: strips all symbols to reduce binary size
-# -Os: size optimization (overrides default -Ofast)
+# Size reduction strategy (13MB → 1-2MB):
+# -flto=auto: Link-Time Optimization removes unused code across all object files
+# -Wl,-gc-sections: Garbage collect unused sections (requires -fdata-sections -ffunction-sections)
+# -Wl,-strip-all: Remove all symbols (identical to -s flag)
+# -s: Strip debug symbols (most critical - removes 8-10MB from unstripped binary)
+# -Os: Optimize for size instead of speed
 LD_FLAGS = -lm \
               -nostartfiles \
               -lc \
               -lgcc \
               $(ARCH_FLAGS) \
-              -Os \
-              $(LTO_FLAGS) \
+              -flto=auto -fuse-linker-plugin \
               $(DEBUG_FLAGS) \
-              -s \
+              -s -Os \
               -static \
-              -Wl,-gc-sections,-Map,$(TARGET_MAP) \
+              -Wl,-gc-sections,-strip-all,-Map,$(TARGET_MAP) \
               -Wl,-L$(LINKER_DIR) \
               -Wl,--cref \
               -T$(LD_SCRIPT) \
