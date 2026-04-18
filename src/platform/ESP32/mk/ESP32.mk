@@ -45,7 +45,15 @@ INCLUDE_DIRS += \
             $(ESP_IDF_DIR)/components/freertos/config/xtensa/include
 
 # Architecture flags for Xtensa LX6 (ESP32)
-ARCH_FLAGS = -mlongcalls -mtext-section-literals
+# -fdata-sections and -ffunction-sections are critical for reducing binary size
+# They allow the linker to garbage-collect unused functions/data from large ESP-IDF libraries
+ARCH_FLAGS = -mlongcalls -mtext-section-literals -fdata-sections -ffunction-sections
+
+# For ESP32, prioritize code size over execution speed to fit in limited flash
+# This significantly reduces binary bloat from ESP-IDF peripheral descriptor tables
+OPTIMISATION_BASE := -flto=auto -fuse-linker-plugin -ffast-math -fmerge-all-constants
+OPTIMISE_SIZE     := -Os
+LTO_FLAGS         := $(OPTIMISATION_BASE) $(OPTIMISE_SIZE)
 
 DEVICE_FLAGS += \
             -DESP32
@@ -60,6 +68,7 @@ STARTUP_SRC =
 ESP_ROM_LD_DIR = $(ESP_IDF_DIR)/components/esp_rom/esp32/ld
 
 # Override default LD_FLAGS since the ARM-specific ones don't apply
+# --gc-sections combined with -fdata-sections/-ffunction-sections removes all unused code from ESP-IDF libraries
 LD_FLAGS = -lm \
               -nostartfiles \
               -lc \
@@ -67,8 +76,9 @@ LD_FLAGS = -lm \
               $(ARCH_FLAGS) \
               $(LTO_FLAGS) \
               $(DEBUG_FLAGS) \
+              -s \
               -static \
-              -Wl,-gc-sections,-Map,$(TARGET_MAP) \
+              -Wl,-gc-sections,-print-gc-sections,-Map,$(TARGET_MAP) \
               -Wl,-L$(LINKER_DIR) \
               -Wl,--cref \
               -T$(LD_SCRIPT) \
