@@ -52,13 +52,6 @@ DEVICE_FLAGS += \
 
 MCU_FLASH_SIZE := 4096
 
-# Optimization for ESP32 (only 4MB flash) - avoid -Ofast which expands code
-# Use -O2 instead of -Os due to Xtensa LX6 relocation issues with -Os
-# The code size reduction from -Os doesn't work well with this architecture
-OPTIMISE_DEFAULT    := -O2
-OPTIMISE_SPEED      := -O2
-LTO_FLAGS           := $(OPTIMISATION_BASE) $(OPTIMISE_DEFAULT)
-
 LD_SCRIPT = $(LINKER_DIR)/esp32.ld
 
 STARTUP_SRC =
