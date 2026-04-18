@@ -200,18 +200,10 @@ else
 ifeq ($(DEBUG),INFO)
 DEBUG_FLAGS            = -ggdb2
 endif
-# ESP32 variants (Xtensa) have relocation issues with LTO, use size-optimized flags instead
-ifneq ($(findstring ESP32,$(TARGET)),)
-OPTIMISATION_BASE     := -ffunction-sections -fdata-sections -fmerge-all-constants -fno-lto
-OPTIMISE_DEFAULT      := -Os
-OPTIMISE_SPEED        := -Os
-OPTIMISE_SIZE         := -Os
-else
 OPTIMISATION_BASE     := -flto=auto -fuse-linker-plugin -ffast-math -fmerge-all-constants
 OPTIMISE_DEFAULT      := -O2
 OPTIMISE_SPEED        := -Ofast
 OPTIMISE_SIZE         := -Os
-endif
 
 LTO_FLAGS             := $(OPTIMISATION_BASE) $(OPTIMISE_SPEED)
 endif
